@@ -8,13 +8,21 @@ import type { Release } from "@/types/track";
 import { Cover, releaseHref } from "./shared";
 
 /** A discography card: cover, title, "2026 • EP", hover-to-play. */
-export default function ReleaseTile({ release }: { release: Release }) {
+export default function ReleaseTile({
+  release,
+  className = "",
+}: {
+  release: Release;
+  className?: string;
+}) {
   const { isContextPlaying, togglePlayContext } = useLibrary();
   const title = displayTitle(release.title);
   const playing = isContextPlaying(`release:${release.id}`);
 
   return (
-    <div className="group relative flex flex-col gap-2 rounded-md p-2 transition-colors hover:bg-white/10 sm:p-3">
+    <div
+      className={`group relative flex flex-col gap-2 rounded-md p-2 transition-colors hover:bg-white/10 sm:p-3 ${className}`}
+    >
       <div className="relative">
         <Cover
           url={release.art?.url}

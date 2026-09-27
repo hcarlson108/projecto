@@ -5,8 +5,10 @@ import { displayArtist, useLibrary } from "@/components/LibraryProvider";
 import { MoreIcon, ShuffleIcon, VerifiedIcon } from "@/components/icons";
 import { formatDuration } from "@/lib/audio-utils";
 import { byNewest, effectiveType, popularTracks } from "@/lib/releases";
+import Link from "next/link";
 import ReleaseTile from "./ReleaseTile";
 import {
+  DISCOGRAPHY_HREF,
   AccentFade,
   Cover,
   Decoration,
@@ -17,6 +19,18 @@ import {
 } from "./shared";
 
 const POPULAR_COLLAPSED = 5;
+
+/**
+ * Like Spotify, the artist page shows a single row of releases (as many as
+ * fit: 2 / 3 / 5 / 6 columns) and "Show all" opens the full discography.
+ */
+function oneRow(index: number) {
+  if (index < 2) return "";
+  if (index === 2) return "max-sm:hidden";
+  if (index < 5) return "max-lg:hidden";
+  if (index === 5) return "max-xl:hidden";
+  return "hidden";
+}
 
 const filters = ["Popular releases", "Albums", "Singles and EPs"] as const;
 type Filter = (typeof filters)[number];
@@ -118,7 +132,7 @@ export default function ArtistView() {
               {shownPopular.map((track, i) => {
                 const isCurrent = track.id === currentId;
                 const showPause = isCurrent && isPlaying;
-                const plays = placeholderPlays(artistName, i);
+                const plays = placeholderPlays(i);
                 return (
                   <li key={track.id}>
                     <button
@@ -175,12 +189,12 @@ export default function ArtistView() {
           <section className="flex flex-col gap-4">
             <div className="flex items-baseline justify-between px-2 sm:px-0">
               <h3 className="text-2xl font-bold">Discography</h3>
-              <span
-                aria-hidden
-                className="text-sm font-bold text-white/60 hover:underline"
+              <Link
+                href={DISCOGRAPHY_HREF}
+                className="text-sm font-bold text-white/60 transition-colors hover:text-white hover:underline"
               >
                 Show all
-              </span>
+              </Link>
             </div>
             <div className="flex gap-2 overflow-x-auto px-2 sm:px-0">
               {filters.map((f) => (
@@ -202,8 +216,12 @@ export default function ArtistView() {
 
             {discography.length > 0 ? (
               <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-                {discography.map((release) => (
-                  <ReleaseTile key={release.id} release={release} />
+                {discography.map((release, i) => (
+                  <ReleaseTile
+                    key={release.id}
+                    release={release}
+                    className={oneRow(i)}
+                  />
                 ))}
               </div>
             ) : (

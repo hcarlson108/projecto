@@ -36,7 +36,7 @@ export default function FileUpload() {
             value={artist}
             onChange={(e) => setArtist(e.target.value)}
             placeholder="Unknown Artist"
-            className="rounded-lg border border-foreground/15 bg-transparent px-3 py-2.5 text-base transition-colors placeholder:text-foreground/40 hover:border-foreground/30 focus:border-foreground/50 sm:text-sm"
+            className="block h-11 w-full min-w-0 appearance-none rounded-lg border border-foreground/15 bg-transparent px-3 text-base leading-normal transition-colors placeholder:text-foreground/40 hover:border-foreground/30 focus:border-foreground/50 sm:text-sm"
           />
         </label>
       </section>

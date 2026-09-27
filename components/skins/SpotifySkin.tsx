@@ -4,11 +4,21 @@ import type { CSSProperties } from "react";
 import { useLibrary } from "@/components/LibraryProvider";
 import AlbumView from "./spotify/AlbumView";
 import ArtistView from "./spotify/ArtistView";
+import DiscographyView from "./spotify/DiscographyView";
 import PlayerBar from "./spotify/PlayerBar";
 import { DEFAULT_ACCENT, GREEN } from "./spotify/shared";
 
-/** With a releaseId it shows that release's page, otherwise the artist page. */
-export default function SpotifySkin({ releaseId }: { releaseId?: string }) {
+/**
+ * Which page to show: a release (releaseId), the full discography, or the
+ * artist page by default.
+ */
+export default function SpotifySkin({
+  releaseId,
+  view,
+}: {
+  releaseId?: string;
+  view?: "discography";
+}) {
   const { releases, artistHeader } = useLibrary();
   const release = releaseId
     ? (releases.find((r) => r.id === releaseId) ?? null)
@@ -28,7 +38,13 @@ export default function SpotifySkin({ releaseId }: { releaseId?: string }) {
       }
       className="w-full max-w-7xl overflow-clip bg-[#121212] text-white max-sm:w-[calc(100%+2rem)] sm:rounded-xl"
     >
-      {release ? <AlbumView release={release} /> : <ArtistView />}
+      {release ? (
+        <AlbumView release={release} />
+      ) : view === "discography" ? (
+        <DiscographyView />
+      ) : (
+        <ArtistView />
+      )}
       <PlayerBar />
     </div>
   );

@@ -171,3 +171,11 @@ export function TrashIcon({ className = "size-4" }: IconProps) {
     </svg>
   );
 }
+
+export function ChevronDownIcon({ className = "size-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className}>
+      <path d="m3.5 6 4.5 4.5L12.5 6" />
+    </svg>
+  );
+}

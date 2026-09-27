@@ -9,13 +9,14 @@ import { getPlatform } from "@/lib/platforms";
 export default async function PreviewPage({
   searchParams,
 }: PageProps<"/preview">) {
-  const { platform: id, release } = await searchParams;
+  const { platform: id, release, view } = await searchParams;
   const platform = getPlatform(typeof id === "string" ? id : undefined);
 
   const skins: Record<string, ReactNode> = {
     spotify: (
       <SpotifySkin
         releaseId={typeof release === "string" ? release : undefined}
+        view={view === "discography" ? "discography" : undefined}
       />
     ),
     "apple-music": <AppleMusicSkin />,

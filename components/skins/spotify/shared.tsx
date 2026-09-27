@@ -8,6 +8,7 @@ export const GREEN = "#1dd75f";
 export const DEFAULT_ACCENT = "83, 83, 83";
 
 export const ARTIST_HREF = "/preview?platform=spotify";
+export const DISCOGRAPHY_HREF = "/preview?platform=spotify&view=discography";
 export const releaseHref = (id: string) =>
   `/preview?platform=spotify&release=${id}`;
 
@@ -32,16 +33,17 @@ const number = new Intl.NumberFormat("en-US");
 
 /**
  * Uploaded files have no real stats, so the preview shows believable
- * placeholders derived from the artist name: stable, and falling off by rank.
+ * placeholders for an independent artist. Spotify doesn't show exact counts
+ * under 1,000 plays, it shows "<1,000"; so the top track just clears that
+ * bar and the rest sit under it.
  */
-export function placeholderPlays(artist: string, rank: number) {
-  const base = 2_000_000 + (hash(artist) % 8_000_000);
-  const jitter = 0.85 + (hash(`${artist}:${rank}`) % 30) / 100;
-  return number.format(Math.round((base / (rank + 1) ** 0.7) * jitter));
+export function placeholderPlays(rank: number) {
+  return rank === 0 ? number.format(1069) : "<1,000";
 }
 
+/** Monthly listeners, which Spotify does show exactly: 100–999. */
 export function placeholderListeners(artist: string) {
-  return number.format(500_000 + (hash(`${artist}:listeners`) % 4_500_000));
+  return number.format(100 + (hash(`${artist}:listeners`) % 900)); // 100–999
 }
 
 export function Cover({ url, className }: { url?: string; className: string }) {
@@ -139,5 +141,51 @@ export function TrackNumber({
         </>
       )}
     </span>
+  );
+}
+
+/** Seek bar: a styled track with an invisible native range on top. */
+export function ProgressBar({
+  value,
+  max,
+  onSeek,
+  className = "",
+  interactive = true,
+}: {
+  value: number;
+  max: number;
+  onSeek: (seconds: number) => void;
+  className?: string;
+  /** False for a display-only bar (like the phone mini player's). */
+  interactive?: boolean;
+}) {
+  const percent = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  return (
+    <div
+      className={`group relative flex h-3 flex-1 items-center rounded-full has-focus-visible:outline-2 has-focus-visible:outline-white ${className}`}
+    >
+      <div className="h-1 w-full overflow-hidden rounded-full bg-white/30">
+        <div
+          className="h-full rounded-full bg-white group-hover:bg-(--green)"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      {interactive && (
+        <>
+          {/* Invisible native range on top gives dragging, clicking and
+              keyboard seeking for free. */}
+          <input
+            type="range"
+            min={0}
+            max={max || 0}
+            step={0.1}
+            value={value}
+            onChange={(e) => onSeek(Number(e.target.value))}
+            aria-label="Seek"
+            className="absolute inset-0 w-full cursor-pointer opacity-0"
+          />
+        </>
+      )}
+    </div>
   );
 }

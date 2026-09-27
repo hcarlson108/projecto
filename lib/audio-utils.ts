@@ -1,6 +1,6 @@
 import type { Track } from "@/types/track";
 
-const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "wav", "aif", "aiff", "flac", "ogg", "opus", "alac"];
+const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "wav", "aif", "aiff", "flac", "ogg", "opus"];
 const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif"];
 
 const extension = (file: File) =>

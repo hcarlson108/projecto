@@ -21,6 +21,7 @@ import type { Release } from "@/types/track";
 import ReleaseTile from "./ReleaseTile";
 import {
   ARTIST_HREF,
+  DISCOGRAPHY_HREF,
   AccentFade,
   Cover,
   Decoration,
@@ -72,7 +73,7 @@ export default function AlbumView({ release }: { release: Release }) {
         </Link>
         <Cover
           url={release.art?.url}
-          className="size-52 shrink-0 rounded shadow-[0_4px_60px_rgba(0,0,0,0.5)] sm:size-48 lg:size-58"
+          className="aspect-square w-[68%] max-w-80 shrink-0 rounded shadow-[0_4px_60px_rgba(0,0,0,0.5)] sm:size-48 sm:max-w-none lg:size-58"
         />
         <div className="flex min-w-0 flex-col gap-2 self-stretch sm:self-auto">
           <span className="hidden text-sm font-medium sm:block">{type}</span>
@@ -203,7 +204,7 @@ export default function AlbumView({ release }: { release: Release }) {
                   </Link>
                 </h3>
                 <Link
-                  href={ARTIST_HREF}
+                  href={DISCOGRAPHY_HREF}
                   className="text-sm font-bold text-white/60 hover:underline"
                 >
                   See discography

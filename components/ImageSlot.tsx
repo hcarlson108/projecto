@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type DragEvent } from "react";
+import { useId, useState, type DragEvent } from "react";
 import CropDialog from "@/components/CropDialog";
 import { CropIcon } from "@/components/icons";
 import type { ImageCrop } from "@/components/LibraryProvider";
@@ -36,7 +36,9 @@ export default function ImageSlot({
   /** Shown in the crop dialog, e.g. "Square · 1:1". */
   shapeLabel: string;
 }) {
-  const input = useRef<HTMLInputElement>(null);
+  // Labels pointing at the input open the picker natively (no scripted
+  // click()), the most reliable way on iOS Safari.
+  const inputId = useId();
   const [isDragging, setIsDragging] = useState(false);
   const [editing, setEditing] = useState<{
     source: File;
@@ -111,13 +113,12 @@ export default function ImageSlot({
               <CropIcon className="size-3" />
               Tap to crop
             </span>
-            <button
-              type="button"
-              onClick={() => input.current?.click()}
-              className="pointer-events-auto rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80 pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm"
+            <label
+              htmlFor={inputId}
+              className="pointer-events-auto cursor-pointer rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80 pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm"
             >
               Replace
-            </button>
+            </label>
             <button
               type="button"
               onClick={() => onChange(null)}
@@ -128,23 +129,23 @@ export default function ImageSlot({
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => input.current?.click()}
-          className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-3 text-center transition-colors ${sizeClass} ${
+        <label
+          htmlFor={inputId}
+          className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-3 text-center transition-colors has-focus-visible:outline-2 ${sizeClass} ${
             isDragging
               ? "border-foreground bg-foreground/5"
               : "border-foreground/20 hover:border-foreground/40 hover:bg-foreground/5"
           }`}
         >
           <span className="text-sm font-medium">+ {cta}</span>
-        </button>
+        </label>
       )}
       <input
-        ref={input}
+        id={inputId}
         type="file"
         accept={IMAGE_ACCEPT}
-        hidden
+        aria-label={cta}
+        className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) openCrop(file);

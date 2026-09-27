@@ -50,6 +50,8 @@ type Library = {
 
   /** The loaded track, whether playing or paused. */
   currentId: string | null;
+  /** The list the current track was started from. */
+  context: PlayContext | null;
   isPlaying: boolean;
   /** Playback position of the current track, in seconds. */
   currentTime: number;
@@ -354,6 +356,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
         moveTrackToRelease,
         togglePopular,
         currentId,
+        context,
         isPlaying,
         currentTime,
         isContextPlaying,
