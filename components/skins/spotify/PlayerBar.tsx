@@ -51,12 +51,12 @@ function ProgressBar({
 export default function PlayerBar() {
   const {
     tracks,
-    albumArt,
+    releaseOf,
     artist,
     currentId,
     isPlaying,
     currentTime,
-    togglePlayAll,
+    toggleCurrent,
     playNext,
     playPrevious,
     seek,
@@ -66,6 +66,7 @@ export default function PlayerBar() {
   if (!current) return null;
 
   const artistName = displayArtist(artist);
+  const art = releaseOf(current.id)?.art;
   const duration = current.duration ?? 0;
 
   return (
@@ -79,7 +80,7 @@ export default function PlayerBar() {
     >
       <div className="flex min-w-0 items-center gap-3">
         <Cover
-          url={albumArt?.url}
+          url={art?.url}
           className="size-10 shrink-0 rounded sm:size-12 lg:size-14"
         />
         <div className="flex min-w-0 flex-col">
@@ -110,7 +111,7 @@ export default function PlayerBar() {
           </button>
           <button
             type="button"
-            onClick={togglePlayAll}
+            onClick={toggleCurrent}
             aria-label={isPlaying ? "Pause" : "Play"}
             className="flex size-9 items-center justify-center rounded-full text-white transition hover:scale-105 active:scale-95 sm:size-8 sm:bg-white sm:text-black"
           >

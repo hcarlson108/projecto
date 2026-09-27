@@ -144,3 +144,30 @@ export function CropIcon({ className = "size-4" }: IconProps) {
     </svg>
   );
 }
+
+export function StarIcon({
+  className = "size-4",
+  filled = false,
+}: IconProps & { filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden className={className}>
+      <path d="m8 1.75 1.9 3.9 4.3.6-3.1 3 .73 4.25L8 11.5l-3.83 2 .73-4.25-3.1-3 4.3-.6Z" />
+    </svg>
+  );
+}
+
+export function MoveIcon({ className = "size-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className}>
+      <path d="M2 5h10M9.5 2.5 12 5 9.5 7.5M14 11H4M6.5 8.5 4 11l2.5 2.5" />
+    </svg>
+  );
+}
+
+export function TrashIcon({ className = "size-4" }: IconProps) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={className}>
+      <path d="M2.5 4h11M6 4V2.75h4V4M4 4l.6 9.1a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9L12 4" />
+    </svg>
+  );
+}

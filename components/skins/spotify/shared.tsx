@@ -2,14 +2,14 @@
 
 import type { ReactNode } from "react";
 import { MusicNoteIcon, PauseIcon, PlayIcon } from "@/components/icons";
-import type { Track } from "@/types/track";
 
 export const GREEN = "#1dd75f";
 /** Neutral grey Spotify falls back to before (or without) an album colour. */
 export const DEFAULT_ACCENT = "83, 83, 83";
 
 export const ARTIST_HREF = "/preview?platform=spotify";
-export const ALBUM_HREF = "/preview?platform=spotify&view=album";
+export const releaseHref = (id: string) =>
+  `/preview?platform=spotify&release=${id}`;
 
 /** Spotify's own album-length format: "23 min 12 sec", "1 hr 4 min". */
 export function formatTotal(seconds: number) {
@@ -17,14 +17,6 @@ export function formatTotal(seconds: number) {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   return h > 0 ? `${h} hr ${m} min` : `${m} min ${s % 60} sec`;
-}
-
-/** Spotify's release rules: 1–3 tracks under 30 min is a single, 4–6 an EP. */
-export function releaseType(tracks: Track[]) {
-  const minutes = tracks.reduce((sum, t) => sum + (t.duration ?? 0), 0) / 60;
-  if (minutes < 30 && tracks.length <= 3) return "Single";
-  if (minutes < 30 && tracks.length <= 6) return "EP";
-  return "Album";
 }
 
 /** Stable 32-bit hash, so placeholder stats don't change between renders. */

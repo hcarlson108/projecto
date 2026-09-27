@@ -21,13 +21,45 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useLibrary } from "@/components/LibraryProvider";
-import { GripIcon, PauseIcon, PlayIcon } from "@/components/icons";
+import {
+  displayTitle,
+  useLibrary,
+  type PlayContext,
+} from "@/components/LibraryProvider";
+import {
+  GripIcon,
+  MoveIcon,
+  PauseIcon,
+  PlayIcon,
+  StarIcon,
+} from "@/components/icons";
 import { formatDuration } from "@/lib/audio-utils";
-import type { Track } from "@/types/track";
+import { effectiveType } from "@/lib/releases";
+import type { Release, Track } from "@/types/track";
 
-function TrackRow({ track, index }: { track: Track; index: number }) {
-  const { removeTrack, currentId, isPlaying, togglePlay } = useLibrary();
+const iconButton =
+  "flex size-8 shrink-0 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-foreground/10 hover:text-foreground sm:size-9";
+
+function TrackRow({
+  track,
+  index,
+  context,
+  releaseId,
+}: {
+  track: Track;
+  index: number;
+  context: PlayContext;
+  releaseId: string;
+}) {
+  const {
+    releases,
+    removeTrack,
+    moveTrackToRelease,
+    togglePopular,
+    currentId,
+    isPlaying,
+    togglePlay,
+  } = useLibrary();
   const {
     attributes,
     listeners,
@@ -40,6 +72,9 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
 
   const isCurrent = track.id === currentId;
   const showPause = isCurrent && isPlaying;
+  const otherReleases = releases
+    .map((r, i) => ({ release: r, number: i + 1 }))
+    .filter(({ release }) => release.id !== releaseId);
 
   return (
     <li
@@ -48,7 +83,7 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
         transform: CSS.Translate.toString(transform),
         transition,
       }}
-      className={`group relative flex items-center gap-2 bg-background px-3 first:rounded-t-lg last:rounded-b-lg py-2 text-sm transition-colors sm:px-4 ${
+      className={`group relative flex items-center gap-1 bg-background px-2 py-1.5 text-sm transition-colors first:rounded-t-lg last:rounded-b-lg sm:gap-2 sm:px-3 ${
         isDragging
           ? "z-10 shadow-lg ring-1 ring-foreground/15"
           : "hover:bg-foreground/[0.03]"
@@ -62,7 +97,7 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
         {...attributes}
         {...listeners}
         aria-label={`Reorder ${track.title}`}
-        className={`-ml-2 flex size-9 shrink-0 touch-none items-center justify-center rounded-full text-foreground/30 transition-colors hover:bg-foreground/10 hover:text-foreground ${
+        className={`${iconButton} touch-none text-foreground/30 ${
           isDragging ? "cursor-grabbing" : "cursor-grab"
         }`}
       >
@@ -70,9 +105,9 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
       </button>
       <button
         type="button"
-        onClick={() => togglePlay(track.id)}
+        onClick={() => togglePlay(track.id, context)}
         aria-label={`${showPause ? "Pause" : "Play"} ${track.title}`}
-        className="-ml-1 flex size-9 shrink-0 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-foreground/10 hover:text-foreground"
+        className={iconButton}
       >
         {showPause ? (
           <span className="text-foreground">
@@ -100,18 +135,55 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
         )}
       </button>
       <span
-        className={`min-w-0 flex-1 truncate ${isCurrent ? "font-medium" : ""}`}
+        className={`ml-1 min-w-0 flex-1 truncate ${
+          isCurrent ? "font-medium" : ""
+        }`}
       >
         {track.title}
       </span>
-      <span className="shrink-0 tabular-nums text-foreground/40">
+      <span className="hidden shrink-0 px-1 tabular-nums text-foreground/40 sm:block">
         {formatDuration(track.duration)}
       </span>
       <button
         type="button"
+        onClick={() => togglePopular(track.id)}
+        aria-pressed={track.popular}
+        aria-label={`Feature ${track.title} in Popular`}
+        title="Feature in Popular on your artist page"
+        className={`${iconButton} ${track.popular ? "text-amber-500 hover:text-amber-500" : ""}`}
+      >
+        <StarIcon filled={track.popular} />
+      </button>
+      {otherReleases.length > 0 && (
+        // A native <select> laid invisibly over the icon: compact, and phones
+        // get their own picker.
+        <label
+          title="Move to another release"
+          className={`${iconButton} relative has-focus-visible:outline-2 has-focus-visible:outline-foreground`}
+        >
+          <MoveIcon />
+          <select
+            value=""
+            onChange={(e) => moveTrackToRelease(track.id, e.target.value)}
+            aria-label={`Move ${track.title} to another release`}
+            className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+          >
+            <option value="" disabled>
+              Move to…
+            </option>
+            {otherReleases.map(({ release, number }) => (
+              <option key={release.id} value={release.id}>
+                {number}. {displayTitle(release.title)} ({effectiveType(release)})
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <button
+        type="button"
         onClick={() => removeTrack(track.id)}
         aria-label={`Remove ${track.title}`}
-        className="-mr-2 flex size-9 shrink-0 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-foreground/10 hover:text-foreground"
+        className={iconButton}
       >
         ✕
       </button>
@@ -119,8 +191,8 @@ function TrackRow({ track, index }: { track: Track; index: number }) {
   );
 }
 
-export default function TrackList() {
-  const { tracks, moveTrack } = useLibrary();
+export default function TrackList({ release }: { release: Release }) {
+  const { moveTrack } = useLibrary();
   const sensors = useSensors(
     // A few px of movement before a drag starts, so a plain click on the
     // handle doesn't count as one.
@@ -134,6 +206,7 @@ export default function TrackList() {
     })
   );
 
+  const { tracks } = release;
   if (tracks.length === 0) return null;
 
   function handleDragEnd({ active, over }: DragEndEvent) {
@@ -143,38 +216,34 @@ export default function TrackList() {
   }
 
   return (
-    <section className="flex w-full max-w-2xl flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-medium text-foreground/60">
-          {tracks.length} {tracks.length === 1 ? "track" : "tracks"}
-        </h2>
-        {tracks.length > 1 && (
-          <p className="text-xs text-foreground/40">Drag ⋮⋮ to reorder</p>
-        )}
-      </div>
-      {/* A fixed id keeps dnd-kit's generated aria ids stable across
-          server and client renders. */}
-      <DndContext
-        id="track-list"
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-        // Only auto-scroll right at the window edge (default is 20%), so
-        // dragging a row near the bottom doesn't overshoot its target.
-        autoScroll={{ threshold: { x: 0, y: 0.1 }, acceleration: 5 }}
-        onDragEnd={handleDragEnd}
+    // A fixed, per-release id keeps dnd-kit's generated aria ids stable
+    // across server and client renders.
+    <DndContext
+      id={`tracks-${release.id}`}
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+      // Only auto-scroll right at the window edge (default is 20%), so
+      // dragging a row near the bottom doesn't overshoot its target.
+      autoScroll={{ threshold: { x: 0, y: 0.1 }, acceleration: 5 }}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={tracks.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
       >
-        <SortableContext
-          items={tracks.map((t) => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <ol className="flex flex-col divide-y divide-foreground/10 rounded-lg border border-foreground/10">
-            {tracks.map((track, i) => (
-              <TrackRow key={track.id} track={track} index={i} />
-            ))}
-          </ol>
-        </SortableContext>
-      </DndContext>
-    </section>
+        <ol className="flex flex-col divide-y divide-foreground/10 rounded-lg border border-foreground/10">
+          {tracks.map((track, i) => (
+            <TrackRow
+              key={track.id}
+              track={track}
+              index={i}
+              context={`release:${release.id}`}
+              releaseId={release.id}
+            />
+          ))}
+        </ol>
+      </SortableContext>
+    </DndContext>
   );
 }

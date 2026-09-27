@@ -6,6 +6,8 @@ export type Track = {
   /** Object URL from URL.createObjectURL(); revoke when the track is removed. */
   url: string;
   file: File;
+  /** Featured in the artist page's "Popular" list. */
+  popular: boolean;
 };
 
 export type AlbumArt = {
@@ -21,3 +23,16 @@ export type AlbumArt = {
 };
 
 export type CropArea = { x: number; y: number; width: number; height: number };
+
+export type ReleaseType = "Album" | "EP" | "Single";
+
+export type Release = {
+  id: string;
+  title: string;
+  /** "auto" follows Spotify's rules from the track count and length. */
+  type: ReleaseType | "auto";
+  /** YYYY-MM-DD; empty means today. */
+  releaseDate: string;
+  art: AlbumArt | null;
+  tracks: Track[];
+};

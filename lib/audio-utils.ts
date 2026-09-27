@@ -26,6 +26,7 @@ export function createTrack(file: File): Track {
     duration: null,
     url: URL.createObjectURL(file),
     file,
+    popular: false,
   };
 }
 

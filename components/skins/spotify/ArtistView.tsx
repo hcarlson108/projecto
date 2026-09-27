@@ -1,22 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
-import {
-  displayArtist,
-  displayTitle,
-  useLibrary,
-} from "@/components/LibraryProvider";
-import {
-  MoreIcon,
-  PauseIcon,
-  PlayIcon,
-  ShuffleIcon,
-  VerifiedIcon,
-} from "@/components/icons";
+import { displayArtist, useLibrary } from "@/components/LibraryProvider";
+import { MoreIcon, ShuffleIcon, VerifiedIcon } from "@/components/icons";
 import { formatDuration } from "@/lib/audio-utils";
+import { byNewest, effectiveType, popularTracks } from "@/lib/releases";
+import ReleaseTile from "./ReleaseTile";
 import {
-  ALBUM_HREF,
   AccentFade,
   Cover,
   Decoration,
@@ -24,48 +14,50 @@ import {
   TrackNumber,
   placeholderListeners,
   placeholderPlays,
-  releaseType,
 } from "./shared";
 
 const POPULAR_COLLAPSED = 5;
-const POPULAR_EXPANDED = 10;
 
 const filters = ["Popular releases", "Albums", "Singles and EPs"] as const;
 type Filter = (typeof filters)[number];
 
 export default function ArtistView() {
   const {
+    releases,
     tracks,
-    albumArt,
-    artistHeader,
-    albumTitle,
     artist,
+    artistHeader,
+    releaseOf,
     currentId,
     isPlaying,
+    isContextPlaying,
     togglePlay,
-    togglePlayAll,
+    togglePlayContext,
   } = useLibrary();
   const [expanded, setExpanded] = useState(false);
   const [following, setFollowing] = useState(false);
   const [filter, setFilter] = useState<Filter>("Popular releases");
 
   const artistName = displayArtist(artist);
-  const banner = artistHeader ?? albumArt;
-  const title = displayTitle(albumTitle);
-  const type = releaseType(tracks);
-  const year = new Date().getFullYear();
-  // "Popular" follows the user's track order, so reordering changes it.
-  const popular = tracks.slice(
+  const banner = artistHeader ?? releases.find((r) => r.art)?.art;
+  const popular = popularTracks(tracks);
+  const shownPopular = popular.slice(
     0,
-    expanded ? POPULAR_EXPANDED : POPULAR_COLLAPSED
+    expanded ? popular.length : POPULAR_COLLAPSED
   );
-  const showRelease =
-    filter === "Popular releases" ||
-    (filter === "Albums" ? type === "Album" : type !== "Album");
+  // Releases with no tracks yet aren't "out", so they stay off the page.
+  const discography = byNewest(releases.filter((r) => r.tracks.length > 0))
+    .filter(
+      (r) =>
+        filter === "Popular releases" ||
+        (filter === "Albums"
+          ? effectiveType(r) === "Album"
+          : effectiveType(r) !== "Album")
+    );
 
   return (
     <>
-      {/* Artist banner: the uploaded header, or the cover standing in. */}
+      {/* Artist banner: the uploaded header, or a cover standing in. */}
       <header className="relative flex h-72 items-end overflow-hidden sm:h-80 lg:h-96 xl:h-[28rem]">
         {banner ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -101,8 +93,8 @@ export default function ArtistView() {
         <div className="relative flex flex-col gap-10">
           <div className="flex items-center gap-6 px-2 pt-6 sm:gap-8 sm:px-0">
             <GreenPlayButton
-              isPlaying={isPlaying}
-              onClick={togglePlayAll}
+              isPlaying={isContextPlaying("popular")}
+              onClick={() => togglePlayContext("popular")}
               className="max-sm:order-last max-sm:ml-auto"
             />
             <Decoration>
@@ -123,7 +115,7 @@ export default function ArtistView() {
           <section className="flex flex-col gap-3">
             <h3 className="px-2 text-2xl font-bold sm:px-0">Popular</h3>
             <ol className="flex flex-col">
-              {popular.map((track, i) => {
+              {shownPopular.map((track, i) => {
                 const isCurrent = track.id === currentId;
                 const showPause = isCurrent && isPlaying;
                 const plays = placeholderPlays(artistName, i);
@@ -131,7 +123,7 @@ export default function ArtistView() {
                   <li key={track.id}>
                     <button
                       type="button"
-                      onClick={() => togglePlay(track.id)}
+                      onClick={() => togglePlay(track.id, "popular")}
                       aria-label={`${showPause ? "Pause" : "Play"} ${track.title}`}
                       className="group grid w-full grid-cols-[2.5rem_1fr_auto] items-center gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-white/10 sm:grid-cols-[1.5rem_2.5rem_1fr_8rem_4rem] sm:gap-4 sm:px-4"
                     >
@@ -140,7 +132,10 @@ export default function ArtistView() {
                         isCurrent={isCurrent}
                         showPause={showPause}
                       />
-                      <Cover url={albumArt?.url} className="size-10 rounded" />
+                      <Cover
+                        url={releaseOf(track.id)?.art?.url}
+                        className="size-10 rounded"
+                      />
                       <span className="flex min-w-0 flex-col">
                         <span
                           className={`truncate text-base ${
@@ -165,7 +160,7 @@ export default function ArtistView() {
                 );
               })}
             </ol>
-            {tracks.length > POPULAR_COLLAPSED && (
+            {popular.length > POPULAR_COLLAPSED && (
               <button
                 type="button"
                 onClick={() => setExpanded((e) => !e)}
@@ -205,41 +200,11 @@ export default function ArtistView() {
               ))}
             </div>
 
-            {showRelease ? (
+            {discography.length > 0 ? (
               <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-                <div className="group relative flex flex-col gap-2 rounded-md p-2 transition-colors hover:bg-white/10 sm:p-3">
-                  <div className="relative">
-                    <Cover
-                      url={albumArt?.url}
-                      className="aspect-square w-full rounded-md shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={togglePlayAll}
-                      aria-label={isPlaying ? `Pause ${title}` : `Play ${title}`}
-                      className={`absolute right-2 bottom-2 z-10 flex size-12 items-center justify-center rounded-full bg-(--green) text-black shadow-[0_8px_16px_rgba(0,0,0,0.3)] transition-all hover:scale-105 hover:brightness-110 focus-visible:translate-y-0 focus-visible:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 pointer-coarse:hidden ${
-                        isPlaying ? "" : "translate-y-2 opacity-0"
-                      }`}
-                    >
-                      {isPlaying ? (
-                        <PauseIcon className="size-5" />
-                      ) : (
-                        <PlayIcon className="size-5" />
-                      )}
-                    </button>
-                  </div>
-                  {/* The link's ::after stretches over the whole card, so any
-                      click on it opens the album; the play button sits above. */}
-                  <Link
-                    href={ALBUM_HREF}
-                    className="truncate font-bold after:absolute after:inset-0 after:rounded-md"
-                  >
-                    {title}
-                  </Link>
-                  <p className="-mt-1.5 truncate text-sm text-white/60">
-                    {year} • {type}
-                  </p>
-                </div>
+                {discography.map((release) => (
+                  <ReleaseTile key={release.id} release={release} />
+                ))}
               </div>
             ) : (
               <p className="px-2 text-sm text-white/60 sm:px-0">
