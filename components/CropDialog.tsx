@@ -98,7 +98,7 @@ export default function CropDialog({
             step={0.01}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
-            className="flex-1 accent-foreground"
+            className="h-8 flex-1 cursor-pointer accent-foreground"
           />
         </label>
         <div className="flex gap-2">

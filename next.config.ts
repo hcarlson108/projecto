@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Lets phones on the local network use the dev server (e.g. testing on an
+  // iPhone at http://10.0.0.150:3000). Dev-only; no effect in production.
+  // Update if your Mac's local IP changes.
+  allowedDevOrigins: ["10.0.0.150"],
 };
 
 export default nextConfig;

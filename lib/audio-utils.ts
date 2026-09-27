@@ -1,7 +1,30 @@
 import type { Track } from "@/types/track";
 
-export const isAudio = (file: File) => file.type.startsWith("audio/");
-export const isImage = (file: File) => file.type.startsWith("image/");
+const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "wav", "aif", "aiff", "flac", "ogg", "opus", "alac"];
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif"];
+
+const extension = (file: File) =>
+  file.name.split(".").pop()?.toLowerCase() ?? "";
+
+// iOS often reports an empty or generic type for files from the Files app or
+// iCloud, so fall back to the extension rather than silently dropping them.
+export const isAudio = (file: File) =>
+  file.type.startsWith("audio/") || AUDIO_EXTENSIONS.includes(extension(file));
+export const isImage = (file: File) =>
+  file.type.startsWith("image/") || IMAGE_EXTENSIONS.includes(extension(file));
+
+/**
+ * For <input accept>: listing extensions as well as the MIME wildcard stops
+ * iOS from greying out files whose type it doesn't recognise.
+ */
+export const AUDIO_ACCEPT = [
+  "audio/*",
+  ...AUDIO_EXTENSIONS.map((e) => `.${e}`),
+].join(",");
+export const IMAGE_ACCEPT = [
+  "image/*",
+  ...IMAGE_EXTENSIONS.map((e) => `.${e}`),
+].join(",");
 
 // A counter rather than crypto.randomUUID(), which is unavailable over plain
 // http (e.g. testing the dev server from a phone on the LAN).

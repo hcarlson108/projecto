@@ -28,6 +28,7 @@ import {
 } from "@/components/LibraryProvider";
 import {
   GripIcon,
+  MoreIcon,
   MoveIcon,
   PauseIcon,
   PlayIcon,
@@ -141,6 +142,10 @@ function TrackRow({
       >
         {track.title}
       </span>
+      {track.popular && (
+        // On phones the star button lives in the ⋯ menu, so show the state here.
+        <StarIcon filled className="size-3.5 shrink-0 text-amber-500 sm:hidden" />
+      )}
       <span className="hidden shrink-0 px-1 tabular-nums text-foreground/40 sm:block">
         {formatDuration(track.duration)}
       </span>
@@ -150,7 +155,7 @@ function TrackRow({
         aria-pressed={track.popular}
         aria-label={`Feature ${track.title} in Popular`}
         title="Feature in Popular on your artist page"
-        className={`${iconButton} ${track.popular ? "text-amber-500 hover:text-amber-500" : ""}`}
+        className={`${iconButton} max-sm:hidden ${track.popular ? "text-amber-500 hover:text-amber-500" : ""}`}
       >
         <StarIcon filled={track.popular} />
       </button>
@@ -159,7 +164,7 @@ function TrackRow({
         // get their own picker.
         <label
           title="Move to another release"
-          className={`${iconButton} relative has-focus-visible:outline-2 has-focus-visible:outline-foreground`}
+          className={`${iconButton} relative has-focus-visible:outline-2 has-focus-visible:outline-foreground max-sm:hidden`}
         >
           <MoveIcon />
           <select
@@ -183,10 +188,42 @@ function TrackRow({
         type="button"
         onClick={() => removeTrack(track.id)}
         aria-label={`Remove ${track.title}`}
-        className={iconButton}
+        className={`${iconButton} max-sm:hidden`}
       >
         ✕
       </button>
+      {/* Phones: star, move and remove folded into one native action menu,
+          which leaves the title room to breathe. */}
+      <label
+        className={`${iconButton} relative has-focus-visible:outline-2 has-focus-visible:outline-foreground sm:hidden`}
+      >
+        <MoreIcon />
+        <select
+          value=""
+          onChange={(e) => {
+            const action = e.target.value;
+            if (action === "popular") togglePopular(track.id);
+            else if (action === "remove") removeTrack(track.id);
+            else if (action.startsWith("move:"))
+              moveTrackToRelease(track.id, action.slice(5));
+          }}
+          aria-label={`Options for ${track.title}`}
+          className="absolute inset-0 cursor-pointer appearance-none opacity-0"
+        >
+          <option value="" disabled>
+            {track.title}
+          </option>
+          <option value="popular">
+            {track.popular ? "Remove from Popular" : "Feature in Popular"}
+          </option>
+          {otherReleases.map(({ release, number }) => (
+            <option key={release.id} value={`move:${release.id}`}>
+              Move to {number}. {displayTitle(release.title)}
+            </option>
+          ))}
+          <option value="remove">Remove</option>
+        </select>
+      </label>
     </li>
   );
 }

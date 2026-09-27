@@ -5,7 +5,7 @@ import ImageSlot from "@/components/ImageSlot";
 import { displayTitle, useLibrary } from "@/components/LibraryProvider";
 import TrackList from "@/components/TrackList";
 import { TrashIcon } from "@/components/icons";
-import { isAudio, isImage } from "@/lib/audio-utils";
+import { AUDIO_ACCEPT, isAudio, isImage } from "@/lib/audio-utils";
 import { releaseType, todayISO } from "@/lib/releases";
 import { useHydrated } from "@/lib/use-hydrated";
 import type { Release, ReleaseType } from "@/types/track";
@@ -67,7 +67,7 @@ function AudioDropZone({ release }: { release: Release }) {
       <input
         ref={input}
         type="file"
-        accept="audio/*"
+        accept={AUDIO_ACCEPT}
         multiple
         hidden
         onChange={(e) => {
@@ -122,7 +122,7 @@ export default function ReleaseCard({
             type="button"
             onClick={handleRemove}
             aria-label={`Remove release ${number}`}
-            className="-mr-2 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
+            className="flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-md px-2 text-sm text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
           >
             <TrashIcon />
             <span className="hidden sm:inline">Remove</span>

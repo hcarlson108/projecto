@@ -4,7 +4,7 @@ import { useRef, useState, type DragEvent } from "react";
 import CropDialog from "@/components/CropDialog";
 import { CropIcon } from "@/components/icons";
 import type { ImageCrop } from "@/components/LibraryProvider";
-import { isImage } from "@/lib/audio-utils";
+import { IMAGE_ACCEPT, isImage } from "@/lib/audio-utils";
 import { cropImage } from "@/lib/crop";
 import type { AlbumArt, CropArea } from "@/types/track";
 
@@ -107,21 +107,21 @@ export default function ImageSlot({
           {/* pointer-events-none on the strip so taps between the pills still
               reach the image; the pills opt back in. */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-linear-to-t from-black/60 to-transparent p-2">
-            <span className="mr-auto hidden items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80 pointer-coarse:flex">
+            <span className="mr-auto hidden items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80 pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm pointer-coarse:flex">
               <CropIcon className="size-3" />
               Tap to crop
             </span>
             <button
               type="button"
               onClick={() => input.current?.click()}
-              className="pointer-events-auto rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80"
+              className="pointer-events-auto rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80 pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm"
             >
               Replace
             </button>
             <button
               type="button"
               onClick={() => onChange(null)}
-              className="pointer-events-auto rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80"
+              className="pointer-events-auto rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80 pointer-coarse:px-3.5 pointer-coarse:py-2 pointer-coarse:text-sm"
             >
               Remove
             </button>
@@ -143,7 +143,7 @@ export default function ImageSlot({
       <input
         ref={input}
         type="file"
-        accept="image/*"
+        accept={IMAGE_ACCEPT}
         hidden
         onChange={(e) => {
           const file = e.target.files?.[0];
