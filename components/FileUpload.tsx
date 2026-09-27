@@ -1,62 +1,190 @@
 "use client";
 
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
-import { useLibrary } from "@/components/LibraryProvider";
-import { formatDuration, isAudio, isImage } from "@/lib/audio-utils";
-import type { Track } from "@/types/track";
+import CropDialog from "@/components/CropDialog";
+import { CropIcon } from "@/components/icons";
+import { useLibrary, type ImageCrop } from "@/components/LibraryProvider";
+import { isAudio, isImage } from "@/lib/audio-utils";
+import { cropImage } from "@/lib/crop";
+import type { AlbumArt, CropArea } from "@/types/track";
 
-function PlayIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden className="size-4">
-      <path d="M4 2.5v11a.5.5 0 0 0 .76.43l9-5.5a.5.5 0 0 0 0-.86l-9-5.5A.5.5 0 0 0 4 2.5Z" />
-    </svg>
-  );
-}
+/**
+ * An image picker that doubles as its own preview: empty, it's a dashed
+ * "add" tile (click or drop); filled, it shows the image with
+ * Crop/Replace/Remove. Every new image goes through the crop dialog first.
+ */
+function ImageSlot({
+  label,
+  cta,
+  hint,
+  image,
+  onChange,
+  sizeClass,
+  aspect,
+  maxWidth,
+  shapeLabel,
+}: {
+  label: string;
+  /** Empty-state call to action, e.g. "Add album art". */
+  cta: string;
+  hint: string;
+  image: AlbumArt | null;
+  onChange: (file: File | null, crop?: ImageCrop) => void;
+  sizeClass: string;
+  /** Width / height the crop is locked to. */
+  aspect: number;
+  /** Cropped output is scaled down to at most this many pixels wide. */
+  maxWidth: number;
+  /** Shown in the crop dialog, e.g. "Square · 1:1". */
+  shapeLabel: string;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [editing, setEditing] = useState<{
+    source: File;
+    url: string;
+    area?: CropArea;
+  } | null>(null);
 
-function PauseIcon() {
+  function openCrop(source: File, area?: CropArea) {
+    setEditing({ source, url: URL.createObjectURL(source), area });
+  }
+
+  function closeCrop() {
+    if (editing) URL.revokeObjectURL(editing.url);
+    setEditing(null);
+  }
+
+  async function saveCrop(area: CropArea) {
+    if (!editing) return;
+    const cropped = await cropImage(editing.source, area, maxWidth);
+    onChange(cropped, { source: editing.source, cropArea: area });
+    closeCrop();
+  }
+
+  function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = Array.from(e.dataTransfer.files).find(isImage);
+    if (file) openCrop(file);
+  }
+
   return (
-    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden className="size-4">
-      <rect x="3" y="2" width="3.5" height="12" rx="1" />
-      <rect x="9.5" y="2" width="3.5" height="12" rx="1" />
-    </svg>
+    <div
+      className="flex flex-col gap-1.5"
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsDragging(false);
+        }
+      }}
+      onDrop={handleDrop}
+    >
+      <span className="text-sm font-medium text-foreground/60">{label}</span>
+      {image ? (
+        <div
+          className={`group relative overflow-hidden rounded-lg ${sizeClass} ${
+            isDragging ? "ring-2 ring-foreground" : ""
+          }`}
+        >
+          {/* The whole image is the crop button. */}
+          <button
+            type="button"
+            onClick={() => openCrop(image.source, image.cropArea)}
+            aria-label={`Crop ${label.toLowerCase()}`}
+            className="absolute inset-0 size-full"
+          >
+            {/* next/image can't optimize blob: URLs, so a plain img is used. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image.url} alt={label} className="size-full object-cover" />
+            <span className="absolute inset-0 flex items-center justify-center gap-2 bg-black/45 text-sm font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-has-focus-visible:opacity-100">
+              <CropIcon />
+              <span className="pointer-coarse:hidden">Click to crop</span>
+              <span className="hidden pointer-coarse:inline">Tap to crop</span>
+            </span>
+          </button>
+          {/* pointer-events-none on the strip so taps between the pills still
+              reach the image; the pills opt back in. */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-linear-to-t from-black/60 to-transparent p-2">
+            <span className="mr-auto hidden items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80 pointer-coarse:flex">
+              <CropIcon className="size-3" />
+              Tap to crop
+            </span>
+            <button
+              type="button"
+              onClick={() => input.current?.click()}
+              className="pointer-events-auto rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80"
+            >
+              Replace
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              className="pointer-events-auto rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-black/80"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => input.current?.click()}
+          className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-3 text-center transition-colors ${sizeClass} ${
+            isDragging
+              ? "border-foreground bg-foreground/5"
+              : "border-foreground/20 hover:border-foreground/40 hover:bg-foreground/5"
+          }`}
+        >
+          <span className="text-sm font-medium">+ {cta}</span>
+          <span className="text-xs text-foreground/50">{hint}</span>
+        </button>
+      )}
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) openCrop(file);
+          e.target.value = "";
+        }}
+      />
+      {editing && (
+        <CropDialog
+          title={`Crop ${label.toLowerCase()}`}
+          imageUrl={editing.url}
+          aspect={aspect}
+          shapeLabel={shapeLabel}
+          initialArea={editing.area}
+          onCancel={closeCrop}
+          onSave={saveCrop}
+        />
+      )}
+    </div>
   );
 }
 
 export default function FileUpload() {
-  const { tracks, albumArt, addTracks, removeTrack, setAlbumArt } =
-    useLibrary();
+  const {
+    tracks,
+    addTracks,
+    albumArt,
+    setAlbumArt,
+    artistHeader,
+    setArtistHeader,
+    albumTitle,
+    setAlbumTitle,
+    artist,
+    setArtist,
+  } = useLibrary();
   const [isDragging, setIsDragging] = useState(false);
   const audioInput = useRef<HTMLInputElement>(null);
-  const coverInput = useRef<HTMLInputElement>(null);
-
-  // One shared, hidden <audio> element: starting a track stops the previous one.
-  const audio = useRef<HTMLAudioElement>(null);
-  const [currentId, setCurrentId] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  function togglePlay(track: Track) {
-    const el = audio.current;
-    if (!el) return;
-    if (currentId === track.id && !el.paused) {
-      el.pause();
-      return;
-    }
-    if (currentId !== track.id) {
-      el.src = track.url;
-      setCurrentId(track.id);
-    }
-    // Rejects with AbortError if another track is picked before this starts.
-    el.play().catch(() => {});
-  }
-
-  function handleRemove(id: string) {
-    if (id === currentId && audio.current) {
-      audio.current.pause();
-      audio.current.removeAttribute("src");
-      setCurrentId(null);
-    }
-    removeTrack(id);
-  }
 
   function addFiles(files: File[]) {
     const audio = files.filter(isAudio);
@@ -80,165 +208,102 @@ export default function FileUpload() {
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-6">
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-            setIsDragging(false);
-          }
-        }}
-        onDrop={handleDrop}
-        className={`flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-6 text-center sm:p-10 transition-colors ${
-          isDragging
-            ? "border-foreground bg-foreground/5"
-            : "border-foreground/20 hover:border-foreground/40"
-        }`}
-      >
-        <p className="text-lg font-medium">
-          <span className="pointer-coarse:hidden">
-            Drop audio files and album art here
-          </span>
-          <span className="hidden pointer-coarse:inline">
-            Add your tracks and album art
-          </span>
-        </p>
-        <p className="text-sm text-foreground/60">
-          Files stay in your browser and are never uploaded.
-        </p>
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-          <button
-            type="button"
-            onClick={() => audioInput.current?.click()}
-            className="min-h-11 rounded-full bg-foreground px-5 text-sm font-medium text-background transition hover:bg-foreground/85 active:scale-[0.98]"
-          >
-            Choose audio
-          </button>
-          <button
-            type="button"
-            onClick={() => coverInput.current?.click()}
-            className="min-h-11 rounded-full border border-foreground/20 px-5 text-sm font-medium transition hover:border-foreground/40 hover:bg-foreground/5 active:scale-[0.98]"
-          >
-            Choose album art
-          </button>
-        </div>
-        <input
-          ref={audioInput}
-          type="file"
-          accept="audio/*"
-          multiple
-          hidden
-          onChange={handleInput}
-        />
-        <input
-          ref={coverInput}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={handleInput}
-        />
-      </div>
+      <ImageSlot
+        label="Artist header"
+        cta="Add artist header"
+        hint="Wide image"
+        image={artistHeader}
+        onChange={setArtistHeader}
+        aspect={2660 / 1140}
+        maxWidth={2660}
+        shapeLabel="Wide banner · 2660 × 1140"
+        sizeClass="h-40 w-full sm:h-48"
+      />
 
-      {albumArt && (
-        <section className="flex items-center gap-4">
-          {/* next/image can't optimize blob: URLs, so a plain img is used. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={albumArt.url}
-            alt="Album art"
-            className="size-20 shrink-0 rounded-lg object-cover sm:size-24"
-          />
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="truncate text-sm font-medium">{albumArt.file.name}</p>
+      <section className="grid gap-4 sm:grid-cols-[1fr_12rem]">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-foreground/60">Tracks</span>
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setIsDragging(false);
+              }
+            }}
+            onDrop={handleDrop}
+            className={`flex flex-1 flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+              isDragging
+                ? "border-foreground bg-foreground/5"
+                : "border-foreground/20 hover:border-foreground/40"
+            }`}
+          >
+            <p className="font-medium">
+              <span className="pointer-coarse:hidden">
+                Drop audio files
+              </span>
+              <span className="hidden pointer-coarse:inline">
+                Add audio files
+              </span>
+            </p>
+            <p className="text-xs text-foreground/50">
+              Stays on your device
+            </p>
             <button
               type="button"
-              onClick={() => setAlbumArt(null)}
-              className="-ml-2 self-start rounded-md px-2 py-2 text-sm text-foreground/60 transition-colors hover:bg-foreground/5 hover:text-foreground"
+              onClick={() => audioInput.current?.click()}
+              className="min-h-11 w-full rounded-full bg-foreground px-5 text-sm font-medium text-background transition hover:bg-foreground/85 active:scale-[0.98] sm:w-auto"
             >
-              Remove
+              {tracks.length > 0 ? "Add more files" : "Choose files"}
             </button>
+            <input
+              ref={audioInput}
+              type="file"
+              accept="audio/*"
+              multiple
+              hidden
+              onChange={handleInput}
+            />
           </div>
-        </section>
-      )}
+        </div>
 
-      {tracks.length > 0 && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-foreground/60">
-            {tracks.length} {tracks.length === 1 ? "track" : "tracks"}
-          </h2>
-          <ol className="flex flex-col divide-y divide-foreground/10 overflow-hidden rounded-lg border border-foreground/10">
-            {tracks.map((track, i) => {
-              const isCurrent = track.id === currentId;
-              const showPause = isCurrent && isPlaying;
-              return (
-                <li
-                  key={track.id}
-                  className="group flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-foreground/[0.03] sm:px-4"
-                >
-                  <button
-                    type="button"
-                    onClick={() => togglePlay(track)}
-                    aria-label={`${showPause ? "Pause" : "Play"} ${track.title}`}
-                    className="-ml-2 flex size-9 shrink-0 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-foreground/10 hover:text-foreground"
-                  >
-                    {showPause ? (
-                      <span className="text-foreground">
-                        <PauseIcon />
-                      </span>
-                    ) : (
-                      <>
-                        {/* Track number, swapped for a play icon on hover,
-                            keyboard focus, touch devices, or when paused. */}
-                        <span
-                          className={`tabular-nums group-hover:hidden group-focus-within:hidden pointer-coarse:hidden ${
-                            isCurrent ? "hidden" : ""
-                          }`}
-                        >
-                          {i + 1}
-                        </span>
-                        <span
-                          className={`group-hover:block group-focus-within:block pointer-coarse:block ${
-                            isCurrent ? "block text-foreground" : "hidden"
-                          }`}
-                        >
-                          <PlayIcon />
-                        </span>
-                      </>
-                    )}
-                  </button>
-                  <span
-                    className={`min-w-0 flex-1 truncate ${
-                      isCurrent ? "font-medium" : ""
-                    }`}
-                  >
-                    {track.title}
-                  </span>
-                  <span className="shrink-0 tabular-nums text-foreground/40">
-                    {formatDuration(track.duration)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(track.id)}
-                    aria-label={`Remove ${track.title}`}
-                    className="-mr-2 flex size-9 shrink-0 items-center justify-center rounded-full text-foreground/40 transition-colors hover:bg-foreground/10 hover:text-foreground"
-                  >
-                    ✕
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      )}
+        <ImageSlot
+          label="Album art"
+          cta="Add album art"
+          hint="Square image"
+          image={albumArt}
+          onChange={setAlbumArt}
+          aspect={1}
+          maxWidth={1500}
+          shapeLabel="Square · 1:1"
+          sizeClass="aspect-square w-48 sm:w-full"
+        />
+      </section>
 
-      <audio
-        ref={audio}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => setIsPlaying(false)}
-      />
+      <section className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-foreground/60">
+            Album title
+          </span>
+          <input
+            value={albumTitle}
+            onChange={(e) => setAlbumTitle(e.target.value)}
+            placeholder="Untitled"
+            className="rounded-lg border border-foreground/15 bg-transparent px-3 py-2.5 text-base transition-colors placeholder:text-foreground/40 hover:border-foreground/30 focus:border-foreground/50 sm:text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-foreground/60">Artist</span>
+          <input
+            value={artist}
+            onChange={(e) => setArtist(e.target.value)}
+            placeholder="Unknown Artist"
+            className="rounded-lg border border-foreground/15 bg-transparent px-3 py-2.5 text-base transition-colors placeholder:text-foreground/40 hover:border-foreground/30 focus:border-foreground/50 sm:text-sm"
+          />
+        </label>
+      </section>
     </div>
   );
 }
