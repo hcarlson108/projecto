@@ -8,6 +8,8 @@ export type Track = {
   file: File;
   /** Featured in the artist page's "Popular" list. */
   popular: boolean;
+  /** True once the browser reports it can't decode this file (e.g. .caf). */
+  unplayable?: boolean;
 };
 
 export type AlbumArt = {

@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createTrack, readDuration } from "@/lib/audio-utils";
+import { createTrack, probeAudio } from "@/lib/audio-utils";
 import { readAccentColor } from "@/lib/color";
 import { popularTracks } from "@/lib/releases";
 import type { AlbumArt, CropArea, Release, Track } from "@/types/track";
@@ -99,9 +99,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     newRelease(FIRST_RELEASE_ID),
   ]);
   const [artist, setArtist] = useState("");
-  const [artistHeader, setArtistHeaderState] = useState<AlbumArt | null>(
-    null
-  );
+  const [artistHeader, setArtistHeaderState] = useState<AlbumArt | null>(null);
 
   // One shared, hidden <audio> element: starting a track stops the previous one.
   const audio = useRef<HTMLAudioElement>(null);
@@ -121,13 +119,13 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       prev.map((r) => {
         const tracks = update(r.tracks);
         return tracks === r.tracks ? r : { ...r, tracks };
-      })
+      }),
     );
   }
 
   function updateRelease(id: string, details: ReleaseDetails) {
     setReleases((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, ...details } : r))
+      prev.map((r) => (r.id === id ? { ...r, ...details } : r)),
     );
   }
 
@@ -151,17 +149,19 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const added = files.map(createTrack);
     setReleases((prev) =>
       prev.map((r) =>
-        r.id === releaseId ? { ...r, tracks: [...r.tracks, ...added] } : r
-      )
+        r.id === releaseId ? { ...r, tracks: [...r.tracks, ...added] } : r,
+      ),
     );
 
     for (const track of added) {
-      readDuration(track.url).then((duration) =>
+      probeAudio(track.url).then(({ duration, unplayable }) =>
         updateTracks((list) =>
           list.some((t) => t.id === track.id)
-            ? list.map((t) => (t.id === track.id ? { ...t, duration } : t))
-            : list
-        )
+            ? list.map((t) =>
+                t.id === track.id ? { ...t, duration, unplayable } : t,
+              )
+            : list,
+        ),
       );
     }
   }
@@ -171,7 +171,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const track = findTrack(id);
     if (track) URL.revokeObjectURL(track.url);
     updateTracks((list) =>
-      list.some((t) => t.id === id) ? list.filter((t) => t.id !== id) : list
+      list.some((t) => t.id === id) ? list.filter((t) => t.id !== id) : list,
     );
   }
 
@@ -193,8 +193,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       prev.map((r) =>
         r.id === releaseId
           ? { ...r, tracks: [...r.tracks, track] }
-          : { ...r, tracks: r.tracks.filter((t) => t.id !== id) }
-      )
+          : { ...r, tracks: r.tracks.filter((t) => t.id !== id) },
+      ),
     );
   }
 
@@ -202,7 +202,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     updateTracks((list) =>
       list.some((t) => t.id === id)
         ? list.map((t) => (t.id === id ? { ...t, popular: !t.popular } : t))
-        : list
+        : list,
     );
   }
 
@@ -211,7 +211,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     prev: AlbumArt | null,
     file: File | null,
     crop: ImageCrop | undefined,
-    store: (update: (current: AlbumArt | null) => AlbumArt | null) => void
+    store: (update: (current: AlbumArt | null) => AlbumArt | null) => void,
   ) {
     if (prev) URL.revokeObjectURL(prev.url);
     if (!file) return store(() => null);
@@ -226,8 +226,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     }));
     readAccentColor(url).then((color) =>
       store((current) =>
-        current?.url === url ? { ...current, color } : current
-      )
+        current?.url === url ? { ...current, color } : current,
+      ),
     );
   }
 
@@ -235,8 +235,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     const release = releases.find((r) => r.id === id);
     loadImage(release?.art ?? null, file, crop, (update) =>
       setReleases((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, art: update(r.art) } : r))
-      )
+        prev.map((r) => (r.id === id ? { ...r, art: update(r.art) } : r)),
+      ),
     );
   }
 
@@ -289,8 +289,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   }
 
   function togglePlayContext(ctx: PlayContext) {
-    const id =
-      context === ctx && currentId ? currentId : contextIds(ctx)[0];
+    const id = context === ctx && currentId ? currentId : contextIds(ctx)[0];
     if (id) togglePlay(id, ctx);
   }
 
@@ -382,6 +381,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
 
 export function useLibrary() {
   const library = useContext(LibraryContext);
-  if (!library) throw new Error("useLibrary must be used within LibraryProvider");
+  if (!library)
+    throw new Error("useLibrary must be used within LibraryProvider");
   return library;
 }

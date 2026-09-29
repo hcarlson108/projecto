@@ -144,11 +144,23 @@ function TrackRow({
       </span>
       {track.popular && (
         // On phones the star button lives in the ⋯ menu, so show the state here.
-        <StarIcon filled className="size-3.5 shrink-0 text-amber-500 sm:hidden" />
+        <StarIcon
+          filled
+          className="size-3.5 shrink-0 text-amber-500 sm:hidden"
+        />
       )}
-      <span className="hidden shrink-0 px-1 tabular-nums text-foreground/40 sm:block">
-        {formatDuration(track.duration)}
-      </span>
+      {track.unplayable ? (
+        <span
+          title="This browser can't play this format. Try WAV, MP3, M4A or AIFF."
+          className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-500"
+        >
+          Can&rsquo;t play
+        </span>
+      ) : (
+        <span className="hidden shrink-0 px-1 tabular-nums text-foreground/40 sm:block">
+          {formatDuration(track.duration)}
+        </span>
+      )}
       <button
         type="button"
         onClick={() => togglePopular(track.id)}
@@ -178,7 +190,8 @@ function TrackRow({
             </option>
             {otherReleases.map(({ release, number }) => (
               <option key={release.id} value={release.id}>
-                {number}. {displayTitle(release.title)} ({effectiveType(release)})
+                {number}. {displayTitle(release.title)} (
+                {effectiveType(release)})
               </option>
             ))}
           </select>
@@ -240,7 +253,7 @@ export default function TrackList({ release }: { release: Release }) {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const { tracks } = release;

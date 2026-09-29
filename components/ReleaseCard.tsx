@@ -5,7 +5,12 @@ import ImageSlot from "@/components/ImageSlot";
 import { displayTitle, useLibrary } from "@/components/LibraryProvider";
 import TrackList from "@/components/TrackList";
 import { ChevronDownIcon, TrashIcon } from "@/components/icons";
-import { AUDIO_ACCEPT, isAudio, isImage } from "@/lib/audio-utils";
+import {
+  AUDIO_ACCEPT,
+  isAppleMobile,
+  isAudio,
+  isImage,
+} from "@/lib/audio-utils";
 import { releaseType, todayISO } from "@/lib/releases";
 import { useHydrated } from "@/lib/use-hydrated";
 import type { Release, ReleaseType } from "@/types/track";
@@ -74,6 +79,10 @@ function AudioDropZone({ release }: { release: Release }) {
   const { addTracks, setReleaseArt } = useLibrary();
   const [isDragging, setIsDragging] = useState(false);
   const [skipped, setSkipped] = useState<string[]>([]);
+  // Unfiltered picker on iPhone/iPad, where an audio accept list greys every
+  // file out; isAudio() below still skips anything that isn't audio.
+  const hydrated = useHydrated();
+  const accept = hydrated && isAppleMobile() ? undefined : AUDIO_ACCEPT;
   const hasTracks = release.tracks.length > 0;
 
   function addFiles(files: File[]) {
@@ -131,7 +140,7 @@ function AudioDropZone({ release }: { release: Release }) {
           {hasTracks ? "Add more files" : "Choose files"}
           <input
             type="file"
-            accept={AUDIO_ACCEPT}
+            accept={accept}
             multiple
             className="sr-only"
             onChange={(e) => {

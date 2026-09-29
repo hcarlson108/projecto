@@ -1,6 +1,21 @@
 import type { Track } from "@/types/track";
 
-const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "wav", "aif", "aiff", "flac", "ogg", "opus"];
+// Includes the Apple formats GarageBand, Logic and Voice Memos export.
+const AUDIO_EXTENSIONS = [
+  "mp3",
+  "m4a",
+  "aac",
+  "wav",
+  "aif",
+  "aiff",
+  "aifc",
+  "caf",
+  "flac",
+  "ogg",
+  "opus",
+  "weba",
+  "mp4",
+];
 const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif"];
 
 const extension = (file: File) =>
@@ -14,8 +29,8 @@ export const isImage = (file: File) =>
   file.type.startsWith("image/") || IMAGE_EXTENSIONS.includes(extension(file));
 
 /**
- * For <input accept>: listing extensions as well as the MIME wildcard stops
- * iOS from greying out files whose type it doesn't recognise.
+ * For <input accept> on desktop: the MIME wildcard plus extensions. Not used
+ * on iPhone/iPad (see isAppleMobile), where it greys out audio files.
  */
 export const AUDIO_ACCEPT = [
   "audio/*",
@@ -54,13 +69,23 @@ export function createTrack(file: File): Track {
 }
 
 /** Resolves with the duration in seconds, or null if it can't be read. */
-export function readDuration(url: string): Promise<number | null> {
+/**
+ * Reads a track's length, and reports whether the browser can decode it at
+ * all. Safari accepts some containers it cannot play (.caf is the common one),
+ * so a file that selects fine can still be undecodable.
+ */
+export function probeAudio(
+  url: string,
+): Promise<{ duration: number | null; unplayable: boolean }> {
   return new Promise((resolve) => {
     const audio = new Audio();
     audio.preload = "metadata";
     audio.onloadedmetadata = () =>
-      resolve(Number.isFinite(audio.duration) ? audio.duration : null);
-    audio.onerror = () => resolve(null);
+      resolve({
+        duration: Number.isFinite(audio.duration) ? audio.duration : null,
+        unplayable: false,
+      });
+    audio.onerror = () => resolve({ duration: null, unplayable: true });
     audio.src = url;
   });
 }
@@ -70,4 +95,18 @@ export function formatDuration(seconds: number | null) {
   if (seconds === null) return "–:––";
   const s = Math.round(seconds);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/**
+ * iPhone or iPad (including iPadOS, which reports itself as a Mac). iOS maps
+ * an audio `accept` list to its own file types and can grey out every audio
+ * file in the Files app, so on these devices the picker is left unfiltered and
+ * files are checked with isAudio() after picking instead.
+ */
+export function isAppleMobile() {
+  const ua = navigator.userAgent;
+  return (
+    /iPhone|iPad|iPod/.test(ua) ||
+    (ua.includes("Macintosh") && navigator.maxTouchPoints > 0)
+  );
 }
